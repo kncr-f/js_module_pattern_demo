@@ -1,9 +1,9 @@
 //Storage Controller
 const StorageController=(function(){
-   
 
-})();
-  
+
+})();  
+    
 //Product Controller
 const ProductController = (function(){
 //Privat
@@ -41,6 +41,14 @@ return{
         return data;
     },
 
+    setCurrentProduct:function(currentItem){
+        data.selectedProduct=currentItem;
+    },
+
+    getCurrentProduct:function(){
+        return data.selectedProduct;
+    },    
+
     addProduct: function(name,price){
         let id;
         if(data.products.length>0){
@@ -52,6 +60,19 @@ return{
         const newProduct = new Product(id,name,parseFloat(price));
         data.products.push(newProduct);
         return newProduct;
+    },
+
+    updateProduct:function(productName,productPrice){
+        let updatedprd=null;
+
+        data.products.forEach(function(item){
+            if(item.id==data.selectedProduct.id){
+                item.name=productName;
+                item.price=parseFloat(productPrice);
+                updatedprd=item;
+            }
+        });
+        return updatedprd;
     },
 
     getTotal: function(){
@@ -66,9 +87,7 @@ return{
         return data.totalPrice;
 
     }
-
-   
-
+    
 }
 
 
@@ -78,13 +97,19 @@ return{
 const UIController=(function(){
     const Selectors={
         productList:"#item-list",
+        productListItems:"#item-list tr",
         addButton:".addBtn",
+        saveChanges:".updateBtn",
+        deleteButton:".deleteBtn",
+        cancelButton:".cancelBtn",
         productName:"#productName",
         productPrice:"#productPrice",
         productCard:".productCard",
         totalEuro:"#total-euro",
         totalDolar:"#total-dolar",
-        productEdit:".prd-edit"
+        productEdit:".prd-edit",
+        trLine:".tr-line"
+        
     }
 
     return{
@@ -92,7 +117,7 @@ const UIController=(function(){
             let html='';
             item.forEach(prd => {
                 html+=`
-                <tr>
+                <tr class="tr-line">
                     <td>${prd.id}</td>
                     <td>${prd.name}</td>
                     <td>${prd.price} $</td>
@@ -112,14 +137,14 @@ const UIController=(function(){
             return Selectors;
         },
 
-        addProduct: function(prd){
+        addProductToUI: function(prd){
 
             document.querySelector(Selectors.productCard).style.display="block";
             var item=`
-            <tr>
+            <tr class="tr-line">
                     <td>${prd.id}</td>
                     <td>${prd.name}</td>
-                    <td>${prd.price} $</td>
+                    <td>${prd.price} €</td>
                     <td class="text-right">
                        
                             <i class="far fa-edit prd-edit"></i>
@@ -131,6 +156,25 @@ const UIController=(function(){
 
         },
 
+        showUpdatedProduct: function(prd){
+            let updatedItem=null;
+            let items=document.querySelectorAll(Selectors.productListItems);
+            items.forEach(function(item){
+                if(item.classList.contains('bg-warning')){
+                    item.children[1].textContent=prd.name;
+                    item.children[2].textContent=prd.price+' €';
+                    updatedItem=item;
+
+                }
+            })
+
+
+
+
+            return updatedItem;
+        },
+
+        
         clearInputs: function(){
             document.querySelector(Selectors.productName).value="";
             document.querySelector(Selectors.productPrice).value="";
@@ -143,7 +187,43 @@ const UIController=(function(){
         showTotal: function(total){
             document.querySelector(Selectors.totalEuro).textContent=(total).toFixed(2);
             document.querySelector(Selectors.totalDolar).textContent=(total*1.2).toFixed(2);
+        },
+
+        addCurrentProduct:function(){
+            const selectedProduct=ProductController.getCurrentProduct();
+            document.querySelector(Selectors.productName).value=selectedProduct.name;
+            document.querySelector(Selectors.productPrice).value=selectedProduct.price; 
+        },
+
+        addingState: function(bbb){
+            if(bbb){
+                bbb.classList.remove('bg-warning');
+
+            }
+
+            UIController.clearInputs();
+            document.querySelector(Selectors.saveChanges).style.display='none';
+            document.querySelector(Selectors.deleteButton).style.display='none';
+            document.querySelector(Selectors.cancelButton).style.display='none';
+
+        },
+
+        editState: function(tr){ 
+
+            const parent=tr.parentNode;
+
+            for(let i=0; i<parent.children.length; i++){
+                parent.children[i].classList.remove('bg-warning');
+            };
+
+            tr.classList.add('bg-warning');
+
+            document.querySelector(Selectors.addButton).style.display='none';
+            document.querySelector(Selectors.saveChanges).style.display='inline';
+            document.querySelector(Selectors.deleteButton).style.display='inline';
+            document.querySelector(Selectors.cancelButton).style.display='inline';
         }
+        
 
     }
 
@@ -152,15 +232,19 @@ const UIController=(function(){
 //App Controller
 const App=(function(ProductCtrl,UICtrl){
 
-    const UISelectors=UIController.getSelectors();
+    const UISelectors=UICtrl.getSelectors();
     
     //Load Event Listeners
     const loadEventListeners = function(){
         //add product event
         document.querySelector(UISelectors.addButton).addEventListener('click',productAddSubmit);
 
-         //edit product
-         document.querySelector(UISelectors.productList).addEventListener('click',productEditSumbit);
+         //edit product click
+         document.querySelector(UISelectors.productList).addEventListener('click',productEditClick);
+
+         //edit product submit
+         document.querySelector(UISelectors.saveChanges).addEventListener('click',editProductSubmit);
+
     }
 
     const productAddSubmit= function (e){
@@ -172,7 +256,7 @@ const App=(function(ProductCtrl,UICtrl){
             const newProduct= ProductCtrl.addProduct(productName,productPrice);
 
             //add item to the list
-            UIController.addProduct(newProduct);
+            UIController.addProductToUI(newProduct);
 
             //get total
 
@@ -193,17 +277,47 @@ const App=(function(ProductCtrl,UICtrl){
         e.preventDefault();
     }
 
-    const productEditSumbit= function(e){
+    const productEditClick= function(e){
 
         if(e.target.classList.contains("prd-edit")){
             const id=e.target.parentNode.previousElementSibling.previousElementSibling.previousElementSibling.textContent;
             
             //get selected product
             const editprd=ProductCtrl.getEditById(id);
-            console.log(editprd);
+            
+            //set current product
+            ProductCtrl.setCurrentProduct(editprd);
+
+            //add product to UI
+            UICtrl.addCurrentProduct();
+            UICtrl.editState(e.target.parentNode.parentNode);
         }
            
         
+        e.preventDefault();
+    }
+
+    const editProductSubmit= function(e){
+        const productName=document.querySelector(UISelectors.productName).value;
+        const productPrice=document.querySelector(UISelectors.productPrice).value;
+
+        if(productName!=='' && productPrice!==''){
+
+            //update product
+            const updatedProduct= ProductCtrl.updateProduct(productName,productPrice);
+
+            //update UI
+            item=UICtrl.showUpdatedProduct(updatedProduct);
+
+             //get total
+
+             const total = ProductCtrl.getTotal();
+
+             //show total
+  
+             UICtrl.showTotal(total);
+             UICtrl.addingState(item);
+        }
         e.preventDefault();
     }
 
@@ -211,6 +325,9 @@ const App=(function(ProductCtrl,UICtrl){
     return{
         init:function(){
             console.log('starting app...');
+            
+            UICtrl.addingState();
+
             const item2=ProductCtrl.getProducts();
 
             if(item2.length==0){
@@ -219,6 +336,8 @@ const App=(function(ProductCtrl,UICtrl){
             }else{
                 UICtrl.createProductList(item2);
             }
+
+            
            
 
             //load event listeners

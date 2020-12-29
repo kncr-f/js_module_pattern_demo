@@ -2,7 +2,7 @@
 const StorageController=(function(){
 
 
-})();
+})();  
   
 //Product Controller
 const ProductController = (function(){
@@ -40,6 +40,14 @@ return{
     getData:function(){
         return data;
     },
+
+    setCurrentProduct:function(currentItem){
+        data.selectedProduct=currentItem;
+    },
+
+    getCurrentProduct:function(){
+        return data.selectedProduct;
+    },    
 
     addProduct: function(name,price){
         let id;
@@ -131,6 +139,7 @@ const UIController=(function(){
 
         },
 
+        
         clearInputs: function(){
             document.querySelector(Selectors.productName).value="";
             document.querySelector(Selectors.productPrice).value="";
@@ -143,6 +152,14 @@ const UIController=(function(){
         showTotal: function(total){
             document.querySelector(Selectors.totalEuro).textContent=(total).toFixed(2);
             document.querySelector(Selectors.totalDolar).textContent=(total*1.2).toFixed(2);
+        },
+
+        addCurrentProduct:function(){
+            const selectedProduct=ProductController.getCurrentProduct();
+            document.querySelector(Selectors.productName).value=selectedProduct.name;
+            document.querySelector(Selectors.productPrice).value=selectedProduct.price;
+            
+            
         }
 
     }
@@ -200,7 +217,12 @@ const App=(function(ProductCtrl,UICtrl){
             
             //get selected product
             const editprd=ProductCtrl.getEditById(id);
-            console.log(editprd);
+            
+            //set current product
+            ProductCtrl.setCurrentProduct(editprd);
+
+            //add product to UI
+            UICtrl.addCurrentProduct();
         }
            
         
